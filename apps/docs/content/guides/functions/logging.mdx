@@ -1,0 +1,193 @@
+---
+id: 'functions-logging'
+title: 'Edge Functions logging'
+description: 'How to access logs for your Edge Functions.'
+subtitle: 'Monitor your Edge Functions with logging to track execution, debug issues, and optimize performance.'
+---
+
+Logs are provided for each function invocation, locally and in hosted environments.
+
+---
+
+## Accessing logs
+
+### Production
+
+Open the logs for a function in the Dashboard:
+
+1. Go to the [Edge Functions section](/dashboard/project/_/functions) of the Dashboard.
+2. Select your function from the list.
+3. Select the **Logs** tab.
+
+The **Logs** tab shows one list with both kinds of events for the function:
+
+- **Invocations:** one row for each HTTP request the function handled, with the status code and execution time.
+- **Console logs and events:** output from `console.log`, `console.warn`, and `console.error`, uncaught exceptions, and boot and shutdown events.
+
+### Development
+
+When [developing locally](/docs/guides/functions/quickstart) you will see error messages and console log statements printed to your local terminal window.
+
+---
+
+## Explore logs in the Dashboard
+
+### Filter the list
+
+Use the filter bar above the list to narrow the events:
+
+| Filter        | Behavior                                                                                            |
+| ------------- | --------------------------------------------------------------------------------------------------- |
+| Time range    | Show events from a fixed period.                                                                    |
+| Log Type      | Show **Edge Function** (invocations), **Edge Function runtime** (console logs and events), or both. |
+| Level         | Show **Success**, **Warning**, or **Error** events.                                                 |
+| Event message | Match text in the event message.                                                                    |
+
+For an invocation, the level follows the HTTP status code: 2xx is success, 4xx is warning, and 5xx is error. For a console log or event, `error` and `fatal` map to error, `warn` and `warning` map to warning, and other levels map to success.
+
+Select **Live** to fetch new events automatically. Select it again to pause. Choosing a time range or sorting the list also stops live mode.
+
+### Inspect an event
+
+Select a row to open the detail panel. The panel has these tabs:
+
+| Tab          | Shows                                                                    |
+| ------------ | ------------------------------------------------------------------------ |
+| **Overview** | The event grouped into sections, described below.                        |
+| **Raw JSON** | The full event data as JSON.                                             |
+| **Timeline** | Other logs that share the same request, trace, or function execution ID. |
+| **User**     | The user behind the request, when the event can be linked to one.        |
+
+For an invocation, **Overview** has these sections:
+
+- **Network:** host, method, path, and client, when available.
+- **Edge Function:** status, function path, execution time, and execution ID. It includes a **Function Details** section with the function ID, execution region, number of function logs, method, and user agent.
+- **Attributes:** the remaining fields of the event, grouped into **Details**, **Request**, **Response**, request and response headers, and other sections. A section appears only when the event has fields for it.
+
+<Admonition type="note">
+
+If you turn off **Updated Logs interface** in the Dashboard feature previews, the **Logs** page is replaced by separate **Invocations** and **Logs** tabs. Request and response bodies are not logged in either view.
+
+</Admonition>
+
+---
+
+## What invocation logs contain
+
+Invocation logs record the request method, path, and host, the response status code, the execution time, and a limited set of headers.
+
+Request and response bodies are not logged or retained. Logs do not contain the payload a client sent or the data your function returned, and you can't view them in the Dashboard. To see a body while debugging, log the part you need from your function code with `console.log`, taking care not to log sensitive data.
+
+Only a subset of request and response headers is kept. The `function_edge_logs` source records these headers:
+
+- Request headers: `accept`, `content-length`, `host`, and `user-agent`.
+- Response headers: `content-length`, `content-type`, `date`, `server`, and `vary`.
+
+Other headers, including `authorization` and custom headers, reach your function but are not part of the invocation log. To inspect them, log them from your function as shown in [Logging request headers](#logging-request-headers). For the full list of fields, see the [Log field reference](/docs/guides/observability/log-field-reference).
+
+---
+
+## Log event types
+
+### Automatic logs
+
+Your functions automatically capture several types of events:
+
+- **Uncaught exceptions**: Uncaught exceptions thrown by a function during execution are automatically logged. You can see the error message and stack trace in the Logs tool.
+- **Custom log events**: You can use `console.log`, `console.error`, and `console.warn` in your code to emit custom log events. These events also appear in the Logs tool.
+- **Boot and Shutdown Logs**: The Logs tool extends its coverage to include logs for the boot and shutdown of functions.
+
+### Custom logs
+
+You can add your own log messages using standard console methods:
+
+```js
+Deno.serve(async (req) => {
+  try {
+    const { name } = await req.json()
+
+    if (!name) {
+      // Log a warning message
+      console.warn('Empty name parameter received')
+    }
+
+    // Log a message
+    console.log(`Processing request for: ${name}`)
+
+    const data = {
+      message: `Hello ${name || 'Guest'}!`,
+    }
+
+    return new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (error) {
+    // Log an error message
+    console.error(`Request processing failed: ${error.message}`)
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+})
+```
+
+<Admonition type="note">
+
+A custom log message can contain up to 10,000 characters. A function can log up to 100 events within a 10 second period.
+
+</Admonition>
+
+---
+
+## Logging tips
+
+### Logging request headers
+
+When debugging Edge Functions, a common mistake is to try to log headers to the developer console via code like this:
+
+```ts index.ts
+// ❌ This doesn't work as expected
+
+Deno.serve(async (req) => {
+  console.log(`Headers: ${JSON.stringify(req.headers)}`) // Outputs: "{}"
+})
+```
+
+The `req.headers` object appears empty because Headers objects don't store data in enumerable JavaScript properties, making them opaque to `JSON.stringify()`.
+
+Instead, you have to convert headers to a plain object first, for example using `Object.fromEntries`.
+
+```ts index.ts
+// ✅ This works correctly
+Deno.serve(async (req) => {
+  const headersObject = Object.fromEntries(req.headers)
+  const headersJson = JSON.stringify(headersObject, null, 2)
+
+  console.log(`Request headers:\n${headersJson}`)
+})
+```
+
+This results in something like:
+
+```json
+Request headers: {
+    "accept": "*/*",
+    "accept-encoding": "gzip",
+    "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1cGFuYWNobyIsInJvbGUiOiJhbm9uIiwieW91IjoidmVyeSBzbmVha3ksIGh1aD8iLCJpYXQiOjE2NTQ1NDA5MTYsImV4cCI6MTk3MDExNjkxNn0.cwBbk2tq-fUcKF1S0jVKkOAG2FIQSID7Jjvff5Do99Y",
+    "cdn-loop": "cloudflare; subreqs=1",
+    "cf-ew-via": "15",
+    "cf-ray": "8597a2fcc558a5d7-GRU",
+    "cf-visitor": "{\"scheme\":\"https\"}",
+    "cf-worker": "supabase.co",
+    "content-length": "20",
+    "content-type": "application/x-www-form-urlencoded",
+    "host": "edge-runtime.supabase.com",
+    "my-custom-header": "abcd",
+    "user-agent": "curl/8.4.0",
+    "x-deno-subhost": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6InN1cGFiYXNlIn0.eyJkZXBsb3ltZW50X2lkIjoic3VwYW5hY2hvX2M1ZGQxMWFiLTFjYmUtNDA3NS1iNDAxLTY3ZTRlZGYxMjVjNV8wMDciLCJycGNfcm9vdCI6Imh0dHBzOi8vc3VwYWJhc2Utb3JpZ2luLmRlbm8uZGV2L3YwLyIsImV4cCI6MTcwODYxMDA4MiwiaWF0IjoxNzA4NjA5MTgyfQ.-fPid2kEeEM42QHxWeMxxv2lJHZRSkPL-EhSH0r_iV4",
+    "x-forwarded-host": "edge-runtime.supabase.com",
+    "x-forwarded-port": "443",
+    "x-forwarded-proto": "https"
+}
+```
