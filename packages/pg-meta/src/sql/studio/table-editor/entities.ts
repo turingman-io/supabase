@@ -1,3 +1,4 @@
+import { escapeIlikeLiteral } from '../../../helpers'
 import { joinSqlFragments, literal, safeSql, type SafeSqlFragment } from '../../../pg-format'
 
 export const getEntityTypesSQL = ({
@@ -29,7 +30,10 @@ export const getEntityTypesSQL = ({
   // Partitions can live in any schema, so a parent's partitions aren't restricted to `schemas`
   const schemaClause =
     parentId !== undefined ? safeSql`` : safeSql`and nc.nspname in (${schemaList})`
-  const searchClause = search ? safeSql`and c.relname ilike ${literal(`%${search}%`)}` : safeSql``
+  // Escape % and _ so typing a name like `user_roles` doesn't match unrelated tables
+  const searchClause = search
+    ? safeSql`and c.relname ilike ${literal(escapeIlikeLiteral(search))}`
+    : safeSql``
   const partitionClause = excludePartitions ? safeSql`and not c.relispartition` : safeSql``
 
   const parentClause =
