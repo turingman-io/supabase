@@ -316,10 +316,6 @@ export const generateRowObjectFromFields = ({
 }): object => {
   const rowObject = {} as any
   fields.forEach((field) => {
-    // Generated columns are always computed by the database - Postgres rejects
-    // inserts and updates that provide an explicit value for them
-    if (field.isGenerated) return
-
     const isArray = field.format.startsWith('_')
     const value = field.value
     const shouldUseDefaultValue =
