@@ -47,6 +47,8 @@ import { SHORTCUT_IDS } from '@/state/shortcuts/registry'
 import { useShortcut } from '@/state/shortcuts/useShortcut'
 import { useTableEditorStateSnapshot } from '@/state/table-editor'
 
+const ALL_ENTITY_TYPES: string[] = Object.values(ENTITY_TYPE)
+
 type Sort = 'alphabetical' | 'grouped-alphabetical'
 
 export const TableEditorMenu = () => {
@@ -58,7 +60,7 @@ export const TableEditorMenu = () => {
   const [searchText, setSearchText] = useState<string>('')
   const [isSchemaDropdownOpen, setIsSchemaDropdownOpen] = useState(false)
   const [tableToExport, setTableToExport] = useState<SupaTable>()
-  const [visibleTypes, setVisibleTypes] = useState<string[]>(Object.values(ENTITY_TYPE))
+  const [visibleTypes, setVisibleTypes] = useState<string[]>(ALL_ENTITY_TYPES)
   const [sort, setSort] = useLocalStorage<Sort>('table-editor-sort', 'alphabetical')
   const [partitionParentId, setPartitionParentId] = useState<number>()
 
@@ -181,7 +183,7 @@ export const TableEditorMenu = () => {
 
   const slideOffset = partitionParentId === undefined ? -LEVEL_OFFSET : LEVEL_OFFSET
 
-  const hasFiltersApplied = visibleTypes.length !== 5
+  const hasFiltersApplied = visibleTypes.length !== ALL_ENTITY_TYPES.length
 
   // Sync the partition view to each newly selected table: a partition shows its parent's list,
   // anything else shows the main list (unless it is the table whose partitions are open)
@@ -382,7 +384,7 @@ export const TableEditorMenu = () => {
 
                   {visibleTypes.length === 0 && (
                     <TableMenuFilterEmptyState
-                      onResetFilters={() => setVisibleTypes(Object.values(ENTITY_TYPE))}
+                      onResetFilters={() => setVisibleTypes(ALL_ENTITY_TYPES)}
                     />
                   )}
 
