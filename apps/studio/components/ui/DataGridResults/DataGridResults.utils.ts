@@ -7,7 +7,7 @@ const MAX_COLUMN_WIDTH = 500
 export function calculateResultColumnWidth(columnName: string, rows: readonly ResultRow[]) {
   const maxContentLength = rows.reduce(
     (maxLength, row) => Math.max(maxLength, (formatCellValue(row[columnName]) ?? '').length),
-    columnName.length
+    0
   )
 
   return Math.min(
