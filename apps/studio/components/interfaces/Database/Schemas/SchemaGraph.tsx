@@ -599,7 +599,7 @@ export const SchemaGraph = () => {
                     zoomable
                     nodeColor={miniMapNodeColor}
                     maskColor={miniMapMaskColor}
-                    className="border rounded-md shadow-xs mb-11!"
+                    className="border rounded-md shadow-xs"
                   />
                   <SchemaGraphLegend />
                   {hasNextPage && (
