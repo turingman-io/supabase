@@ -318,7 +318,6 @@ export const ProjectLayout = forwardRef<HTMLDivElement, PropsWithChildren<Projec
                 minSize="256px"
                 maxSize={resizableSidebar ? '512px' : '256px'}
                 defaultSize={`${productMenuDefaultSize}px`}
-                groupResizeBehavior="preserve-pixel-size"
                 id="panel-left"
               >
                 <AnimatePresence initial={false}>
